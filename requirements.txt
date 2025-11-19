@@ -1,1 +1,6 @@
-
+fastapi
+uvicorn[standard]
+requests
+python-telegram-bot
+python-dotenv
+sqlalchemy
