@@ -11,19 +11,13 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)-8s | %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger("yandex-market-automation")
+logger = logging.getLogger("yandex-market-test")
 
 app = FastAPI()
 
 # Переменные окружения
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-D2D_API_KEY = os.getenv("D2D_API_KEY")
-HUMBLE_API_KEY = os.getenv("HUMBLE_API_KEY")
-
-# Переменные для RetailCRM
-RETAILCRM_API_KEY = os.getenv("RETAILCRM_API_KEY")
-RETAILCRM_SUBDOMAIN = os.getenv("RETAILCRM_SUBDOMAIN")
 
 def send_telegram(message: str):
     """Отправка уведомлений в Telegram"""
@@ -40,83 +34,11 @@ def send_telegram(message: str):
     except Exception as e:
         logger.error(f"❌ Ошибка Telegram: {str(e)}")
 
-def buy_key_d2d(game_id: str) -> str:
-    """Выкуп ключа через D2D Distribution"""
-    try:
-        url = "https://api.d2d-distribution.com/v1/order"
-        headers = {"Authorization": f"Bearer {D2D_API_KEY}"}
-        response = requests.post(url, json={"product_id": game_id}, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            return response.json()["key"]
-        else:
-            logger.error(f"❌ D2D ошибка: {response.text}")
-            return None
-    except Exception as e:
-        logger.error(f"❌ D2D exception: {str(e)}")
-        return None
-
-def buy_key_humble(game_id: str) -> str:
-    """Выкуп ключа через Humble Business"""
-    try:
-        url = "https://api.humblebusiness.com/v1/order"
-        headers = {"X-API-Key": HUMBLE_API_KEY}
-        response = requests.post(url, json={"product_id": game_id}, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            return response.json()["key"]
-        else:
-            logger.error(f"❌ Humble ошибка: {response.text}")
-            return None
-    except Exception as e:
-        logger.error(f"❌ Humble exception: {str(e)}")
-        return None
-
-def send_to_retailcrm(order_data):
-    """Отправка заказа в RetailCRM"""
-    api_key = RETAILCRM_API_KEY
-    subdomain = RETAILCRM_SUBDOMAIN
-    
-    if not api_key or not subdomain:
-        logger.warning("RetailCRM не настроен")
-        return
-    
-    url = f"https://{subdomain}.retailcrm.ru/api/v5/orders/create"
-    
-    payload = {
-        "order": {
-            "externalId": order_data["order_id"],
-            "firstName": "Клиент",
-            "email": order_data["customer_email"],
-            "status": "new",
-            "items": [
-                {
-                    "offer": {
-                        "name": order_data["game"],
-                        "externalId": order_data["order_id"]
-                    },
-                    "quantity": 1
-                }
-            ],
-            "customFields": {
-                "game_key": order_data["key"]
-            }
-        }
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        if response.status_code == 200:
-            logger.info("✅ Заказ отправлен в RetailCRM")
-        else:
-            logger.error(f"❌ RetailCRM ошибка: {response.text}")
-    except Exception as e:
-        logger.error(f"❌ Ошибка отправки в RetailCRM: {str(e)}")
+def mock_buy_key(game_id: str) -> str:
+    """Имитация выкупа ключа (замените на реальный API)"""
+    import time
+    time.sleep(1)  # Имитация задержки API
+    return f"FAKE_KEY_{game_id}_{datetime.now().strftime('%H%M%S')}"
 
 @app.post("/webhook/yandex-market")
 async def handle_order(request: Request):
@@ -135,30 +57,16 @@ async def handle_order(request: Request):
         
         send_telegram(message)
         
-        # Автовыкуп для первого товара
+        # Автовыкуп для первого товара (имитация)
         product_id = items[0]["offerId"]
         game_name = items[0]["name"]
         
         logger.info(f"🔍 Выкуп ключа для {game_name} (ID: {product_id})")
         
-        # Пробуем основных поставщиков
-        key = buy_key_d2d(product_id) or buy_key_humble(product_id)
-        
-        if not key:
-            logger.error("❌ Не удалось выкупить ключ ни у одного поставщика")
-            send_telegram(f"❌ ОШИБКА: Не удалось выкупить ключ для {order_id}")
-            raise HTTPException(status_code=500, detail="Failed to buy key")
+        key = mock_buy_key(product_id)
         
         logger.info(f"🔑 Ключ выкуплен: {key}")
         logger.info(f"📧 Отправка ключа на {customer_email}")
-        
-        # Отправка в RetailCRM
-        send_to_retailcrm({
-            "order_id": order_id,
-            "customer_email": customer_email,
-            "game": game_name,
-            "key": key
-        })
         
         logger.info(f"✅ Заказ {order_id} завершён")
         
@@ -170,8 +78,7 @@ async def handle_order(request: Request):
 
 @app.get("/health")
 async def health_check():
-    status = "ok" if D2D_API_KEY else "warning (D2D not configured)"
-    return {"status": status, "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
