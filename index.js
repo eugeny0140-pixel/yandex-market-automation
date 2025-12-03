@@ -1,10 +1,32 @@
 require('dotenv').config();
+const express = require('express');
 const { pollNewOrders } = require('./services/yandex-market');
+const { sendEmail } = require('./services/email');
 
-console.log('🚀 Система автоматической обработки заказов запущена');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Первый запуск
-pollNewOrders();
+app.get('/', (req, res) => {
+  res.send('✅ Autodelivery Bot is running');
+});
 
-// Повтор каждые 90 секунд
-setInterval(pollNewOrders, 90 * 1000);
+app.listen(PORT, async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+
+  // 🔸 ТЕСТОВАЯ ОТПРАВКА EMAIL (один раз при старте)
+  try {
+    console.log('📧 Отправляю тестовое письмо на eugeny0140@gmail.com...');
+    await sendEmail(
+      'eugeny0140@gmail.com',
+      'Тест SMTP — Autodelivery Bot',
+      'Если вы видите это письмо — ваш SMTP настроен правильно! ✅\n\nСистема автоматической доставки ключей работает.'
+    );
+    console.log('✅ Тестовое письмо отправлено успешно!');
+  } catch (err) {
+    console.error('❌ Ошибка отправки тестового письма:', err.message);
+  }
+
+  // Запуск основного polling
+  pollNewOrders();
+  setInterval(pollNewOrders, 90 * 1000);
+});
