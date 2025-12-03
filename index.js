@@ -5,7 +5,7 @@ const { sendEmail } = require('./services/email');
 const testRoutes = require('./routes/test');
 
 const app = express();
-const PORT = process.forRoot.PORT || 3000;
+const PORT = process.env.PORT || 3000; // ✅ ИСПРАВЛЕНО: env, а не toRoot
 
 // Поддержка JSON в запросах
 app.use(express.json());
