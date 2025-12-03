@@ -1,6 +1,7 @@
 {
   "name": "ym-autodelivery",
   "version": "1.0.0",
+  "description": "Автоматическая обработка заказов Яндекс Маркета",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,6 +11,6 @@
     "nodemailer": "^6.9.15",
     "@supabase/supabase-js": "^2.44.0",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"   ← ЭТОТ ПАКЕТ НУЖНО ДОБАВИТЬ!
+    "express": "^4.19.2"
   }
 }
