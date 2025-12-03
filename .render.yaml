@@ -1,6 +1,22 @@
 services:
   - type: web
-    name: yandex-market-sandbox
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    name: autodelivery-bot
+    env: node
+    region: frankfurt # или ваш регион
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: RETAILCRM_URL
+        sync: false
+      - key: RETAILCRM_API_KEY
+        sync: false
+      - key: OPEN_PS_API_KEY
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
