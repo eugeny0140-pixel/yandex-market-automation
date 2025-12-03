@@ -7,26 +7,44 @@ const { notifyTelegram } = require('./telegram');
 const YANDEX_API_KEY = process.env.YANDEX_API_KEY;
 const CAMPAIGN_ID = process.env.YANDEX_CAMPAIGN_ID;
 
+// Валидация конфигурации при старте
+if (!YANDEX_API_KEY || !CAMPAIGN_ID) {
+  console.error('❌ ОШИБКА КОНФИГУРАЦИИ: не заданы YANDEX_API_KEY или YANDEX_CAMPAIGN_ID в .env');
+  process.exit(1);
+}
+
 async function pollNewOrders() {
   try {
     console.log('🔍 Запрашиваю новые заказы из Яндекс Маркета...');
+    console.log(`📍 Campaign ID: ${CAMPAIGN_ID}`);
+    console.log(`🔐 API Key (начало): ${YANDEX_API_KEY.substring(0, 8)}...`);
 
-    const response = await axios.get(
-      `https://api.partner.market.yandex.ru/v2/campaigns/${CAMPAIGN_ID}/orders.json`,
-      {
-        headers: { 'Authorization': `Bearer ${YANDEX_API_KEY}` },
-        params: {
-          status: 'PROCESSING',
-          limit: 50
-        }
-      }
-    );
+    const url = `https://api.partner.market.yandex.ru/v2/campaigns/${CAMPAIGN_ID}/orders.json`;
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${YANDEX_API_KEY}`,
+        'Accept': 'application/json'
+      },
+      params: {
+        status: 'PROCESSING',
+        limit: 50
+      },
+      timeout: 10000 // 10 секунд
+    };
+
+    console.log(`📡 Отправляю запрос к: ${url}`);
+
+    const response = await axios.get(url, config);
+
+    console.log(`✅ Успешный ответ от Яндекс Маркета (статус ${response.status})`);
 
     const orders = response.data.orders || [];
     if (orders.length === 0) {
       console.log('📭 Нет новых заказов');
       return;
     }
+
+    console.log(`📦 Найдено заказов: ${orders.length}`);
 
     for (const order of orders) {
       const orderId = order.id;
@@ -63,7 +81,6 @@ async function pollNewOrders() {
           const keyData = await processOrderItem(offerId);
           processedItems.push(keyData);
 
-          // Сохраняем в БД
           await supabase
             .from('processed_orders')
             .insert({
@@ -80,7 +97,6 @@ async function pollNewOrders() {
         }
       }
 
-      // Если есть обработанные товары — отправляем клиенту
       if (processedItems.length > 0) {
         const emailBody = processedItems
           .map(k => `${k.name}:\n${k.key}\n`)
@@ -95,7 +111,7 @@ async function pollNewOrders() {
 📦 ID: ${orderId}
 📧 Клиент: ${email || 'не указан'}
 💰 Сумма: ${order.itemsTotal || 0} RUB
-🎮 Обработано товаров: ${processedItems.length}
+🎮 Обработано: ${processedItems.length}
 
 ${processedItems.map(k => `• ${k.name}: ${k.key}`).join('\n')}
         `.trim();
@@ -111,11 +127,27 @@ ${failedItems.map(i => `- ${i.offerId}: ${i.error}`).join('\n')}
         await notifyTelegram(errorReport);
       }
 
-      console.log(`✅ Заказ ${orderId} завершён (${processedItems.length} обработано, ${failedItems.length} ошибок)`);
+      console.log(`✅ Заказ ${orderId} завершён`);
     }
 
   } catch (err) {
-    console.error('🔴 Критическая ошибка при опросе Яндекс Маркета:', err.message);
+    console.error('🔴 КРИТИЧЕСКАЯ ОШИБКА при опросе Яндекс Маркета:');
+    console.error('Сообщение:', err.message);
+
+    if (err.response) {
+      console.error('Статус ответа:', err.response.status);
+      console.error('URL запроса:', err.config?.url);
+      console.error('Заголовки запроса:', {
+        Authorization: 'Bearer ***' // не логируем полный ключ
+      });
+
+      // Логируем тело ошибки от Яндекса — ТУТ КЛЮЧ К ПРОБЛЕМЕ!
+      console.error('Тело ошибки от Яндекс Маркета:', JSON.stringify(err.response.data, null, 2));
+    }
+
+    if (err.request) {
+      console.error('Нет ответа от сервера — проверьте сеть или таймаут');
+    }
   }
 }
 
