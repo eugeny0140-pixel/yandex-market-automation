@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ym-autodelivery
+    env: node
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: YANDEX_API_KEY
+      - key: YANDEX_CAMPAIGN_ID
+      - key: OPEN_PS_API_KEY
+      - key: SMTP_HOST
+      - key: SMTP_PORT
+      - key: SMTP_SECURE
+      - key: SMTP_USER
+      - key: SMTP_PASS
+      - key: TELEGRAM_BOT_TOKEN
+      - key: TELEGRAM_CHAT_ID
+      - key: SUPABASE_URL
+      - key: SUPABASE_KEY
