@@ -25,7 +25,7 @@ app.listen(PORT, async () => {
 
   // Тестовое письмо
   try {
-    await sendEmail('eugeny0140@gmail.com', 'Сервер запущен', 'Система готова к работе!');
+    await sendEmail('eu9eny0140@yandex.ru', 'Сервер запущен', 'Система готова к работе!');
     console.log('✅ Тестовое письмо отправлено');
   } catch (err) {
     console.error('❌ Ошибка email:', err.message);
