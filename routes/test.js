@@ -4,7 +4,7 @@ const { sendEmail } = require('../services/email');
 const { notifyTelegram } = require('../services/telegram');
 
 router.post('/simulate-order', async (req, res) => {
-  const { email = 'eugeny0140@gmail.com' } = req.body;
+  const { email = 'eu9eny0140@yandex.ru' } = req.body;
   const mockKey1 = 'RATCHET-XXXXX-XXXXX-XXXXX';
   const mockKey2 = 'GTA5-XXXXX-XXXXX-XXXXX';
 
