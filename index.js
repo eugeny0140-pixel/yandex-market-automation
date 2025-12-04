@@ -2,19 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const { pollNewOrders, validateYandexConfig } = require('./services/yandex-market');
 const { sendEmail } = require('./services/email');
-const testRoutes = require('./routes/test');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Поддержка JSON в запросах
 app.use(express.json());
-app.get('/', (req, res) => res.send('✅ Autodelivery Bot is running'));
-app.use('/api', testRoutes);
 
+// Главная страница — для проверки здоровья (Решает ошибку "No open ports")
+app.get('/', (req, res) => {
+  res.send('✅ Autodelivery Bot is running');
+});
+
+// Запуск сервера
 app.listen(PORT, async () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
 
-  // Проверка конфигурации
+  // Проверка конфигурации Яндекс Маркета
   try {
     await validateYandexConfig();
   } catch (err) {
@@ -23,15 +27,20 @@ app.listen(PORT, async () => {
     process.exit(1);
   }
 
-  // Тестовое письмо
+  // Тестовое письмо при старте
   try {
-    await sendEmail('eu9eny0140@yandex.ru', 'Сервер запущен', 'Система готова к работе!');
-    console.log('✅ Тестовое письмо отправлено');
+    console.log('📧 Отправляю стартовое тестовое письмо на eugeny0140@gmail.com...');
+    await sendEmail(
+      'eugeny0140@gmail.com',
+      '✅ Autodelivery Bot — Сервер запущен',
+      'Ваша система автоматической доставки ключей успешно запущена!\n\nТеперь она будет обрабатывать заказы и отправлять ключи.'
+    );
+    console.log('✅ Стартовое письмо отправлено!');
   } catch (err) {
-    console.error('❌ Ошибка email:', err.message);
+    console.error('❌ Ошибка отправки стартового письма:', err.message);
   }
 
-  // Запуск polling
+  // Запуск основного polling-цикла
   pollNewOrders();
-  setInterval(pollNewOrders, 90000);
+  setInterval(pollNewOrders, 90 * 1000); // каждые 90 секунд
 });
